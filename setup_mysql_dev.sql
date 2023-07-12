@@ -1,12 +1,35 @@
--- this script prepares a MySQL server for the project
--- create project developement database with the name : hbnb_dev_db
-CREATE DATABASE IF NOT EXISTS hbnb_dev_db;
--- creating new user named : hbnb_dev with all privileges on the db hbnb_dev_db
--- with the password : hbnb_dev_pwd if it dosen't exist
-CREATE USER IF NOT EXISTS 'hbnb_dev'@'localhost' IDENTIFIED BY 'hbnb_dev_pwd';
--- granting all privileges to the new user
-GRANT ALL PRIVILEGES ON hbnb_dev_db.* TO 'hbnb_dev'@'localhost';
-FLUSH PRIVILEGES;
--- granting the SELECT privilege for the user hbnb_dev in the db performance_schema
-GRANT SELECT ON performance_schema.* TO 'hbnb_dev'@'localhost';
-FLUSH PRIVILEGES;
+-- Creates a MySQL server with:
+--   Database hbnb_dev_db.
+--   User hbnb_dev with password hbnb_dev_pwd in localhost.
+--   Grants all privileges for hbnb_dev on hbnb_dev_db.
+--   Grants SELECT privilege for hbnb_dev on performance.
+
+-- Connect to the MySQL server as root (adjust the credentials if needed)
+db = MySQLdb.connect(
+    host='localhost',
+    port=3306,
+    user='root',
+    passwd='your_root_password'
+)
+
+-- Create a cursor object to execute queries
+cursor = db.cursor()
+
+-- Create the database if it doesn't exist
+cursor.execute("CREATE DATABASE IF NOT EXISTS hbnb_dev_db")
+
+-- Create the user if it doesn't exist and set the password
+cursor.execute("CREATE USER IF NOT EXISTS 'hbnb_dev'@'localhost' IDENTIFIED BY 'hbnb_dev_pwd'")
+
+-- Grant all privileges on hbnb_dev_db to hbnb_dev
+cursor.execute("GRANT ALL PRIVILEGES ON hbnb_dev_db.* TO 'hbnb_dev'@'localhost'")
+
+-- Grant SELECT privilege on performance_schema to hbnb_dev
+cursor.execute("GRANT SELECT ON performance_schema.* TO 'hbnb_dev'@'localhost'")
+
+-- Flush privileges to apply the changes
+cursor.execute("FLUSH PRIVILEGES")
+
+-- Close the cursor and database connection
+cursor.close()
+db.close()
