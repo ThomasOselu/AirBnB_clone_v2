@@ -1,65 +1,30 @@
 #!/usr/bin/python3
-'''module:
-deploy a web static archive to web servers
-'''
+"""
+Fabric script based on the file 1-pack_web_static.py that distributes an
+archive to the web servers
+"""
 
-from fabric.api import env, put, run
-from os.path import exists, isfile
-import os
-import argparse
-
-env.hosts = ['54.196.27.23', '54.157.128.152']
+from fabric.api import put, run, env
+from os.path import exists
+env.hosts = ['54.172.57.66', '100.26.218.223']
 
 
 def do_deploy(archive_path):
-    '''function:
-    distributes an archive to your web servers
-    '''
-
-    if not exists(archive_path) and not isfile(archive_path):
+    """distributes an archive to the web servers"""
+    if exists(archive_path) is False:
         return False
-
     try:
-        archive_filename = os.path.basename(archive_path)
-        no_ext = os.path.splitext(archive_filename)[0]
-
-        # upload the archive to the /tmp/ directory of the web server:
+        file_n = archive_path.split("/")[-1]
+        no_ext = file_n.split(".")[0]
+        path = "/data/web_static/releases/"
         put(archive_path, '/tmp/')
-
-        # unarchive - uncompress the archive to the folder:
-        release_folder = '/data/web_static/releases/' + no_ext + '/'
-        run('mkdir -p {}'.format(release_folder))
-        run('tar -xzf /tmp/{} -C {}'.format(archive_filename, release_folder))
-
-        # delete the archive from the web server
-        # move files to proper locations:
-        run('rm /tmp/{}'.format(archive_filename))
-        run('mv {}web_static/* {}'.format(release_folder, release_folder))
-
-        run('rm -f /data/web_static/current')
-        run('ln -s {} /data/web_static/current'.format(release_folder))
-
-        print('New version deployed!')
+        run('mkdir -p {}{}/'.format(path, no_ext))
+        run('tar -xzf /tmp/{} -C {}{}/'.format(file_n, path, no_ext))
+        run('rm /tmp/{}'.format(file_n))
+        run('mv {0}{1}/web_static/* {0}{1}/'.format(path, no_ext))
+        run('rm -rf {}{}/web_static'.format(path, no_ext))
+        run('rm -rf /data/web_static/current')
+        run('ln -s {}{}/ /data/web_static/current'.format(path, no_ext))
         return True
-
-    except Exception:
+    except:
         return False
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('archive_path', type=str,
-                        help='path to the archive file')
-    parser.add_argument('-u', '--username', type=str,
-                        help='SSH username')
-    parser.add_argument('-i', '--private-key', type=str,
-                        help='Path to SSH private key')
-    args = parser.parse_args()
-
-    if args.username:
-        env.user = args.username
-
-    if args.private_key:
-        env.key_filename = args.private_key
-
-    do_deploy(args.archive_path)

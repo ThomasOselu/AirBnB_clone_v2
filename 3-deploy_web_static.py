@@ -9,7 +9,7 @@ import os
 import argparse
 from datetime import datetime
 
-env.hosts = ['54.196.27.23', '54.157.128.152']
+env.hosts = ['54.172.57.66', '100.26.218.223']
 
 
 def do_pack():
