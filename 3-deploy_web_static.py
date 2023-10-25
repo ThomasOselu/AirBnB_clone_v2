@@ -1,101 +1,52 @@
 #!/usr/bin/python3
-'''module:
-deploy web static to web servers
-'''
+"""
+Fabric script based on the file 2-do_deploy_web_static.py that creates and
+distributes an archive to the web servers
+"""
 
 from fabric.api import env, local, put, run
-from os.path import exists, isfile
-import os
-import argparse
 from datetime import datetime
-
-env.hosts = ['54.172.57.66', '100.26.218.223']
+from os.path import exists, isdir
+env.hosts = ['35.153.18.58', '3.84.161.28']
 
 
 def do_pack():
-    '''function:
-    generates a .tgz archive from the contents of the web_static folder
-    '''
-    now = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-
-    artifact = f'versions/web_static_{now}.tgz'
-    print(f'Packing web_static to {artifact}')
-    if not os.path.exists('versions'):
-        os.makedirs('versions')
-
-    fab_stat = local(f'tar -cvzf {artifact} web_static')
-    if fab_stat.succeeded:
-        size = os.path.getsize(artifact)
-        print(f'web_static packed: {artifact} -> {size}Bytes')
-        return artifact
-    else:
+    """generates a tgz archive"""
+    try:
+        date = datetime.now().strftime("%Y%m%d%H%M%S")
+        if isdir("versions") is False:
+            local("mkdir versions")
+        file_name = "versions/web_static_{}.tgz".format(date)
+        local("tar -cvzf {} web_static".format(file_name))
+        return file_name
+    except:
         return None
 
 
 def do_deploy(archive_path):
-    '''function:
-    distributes an archive to your web servers
-    '''
-
-    if not exists(archive_path) and not isfile(archive_path):
+    """distributes an archive to the web servers"""
+    if exists(archive_path) is False:
         return False
-
     try:
-        archive_filename = os.path.basename(archive_path)
-        no_ext = os.path.splitext(archive_filename)[0]
-
-        # upload the archive to the /tmp/ directory of the web server:
+        file_n = archive_path.split("/")[-1]
+        no_ext = file_n.split(".")[0]
+        path = "/data/web_static/releases/"
         put(archive_path, '/tmp/')
-
-        # unarchive - uncompress the archive to the folder:
-        release_folder = '/data/web_static/releases/' + no_ext + '/'
-        run('mkdir -p {}'.format(release_folder))
-        run('tar -xzf /tmp/{} -C {}'.format(archive_filename, release_folder))
-
-        # delete the archive from the web server
-        # move files to proper locations:
-        run('rm /tmp/{}'.format(archive_filename))
-        run('mv {}web_static/* {}'.format(release_folder, release_folder))
-
-        run('rm -f /data/web_static/current')
-        run('ln -s {} /data/web_static/current'.format(release_folder))
-
-        print('New version deployed!')
+        run('mkdir -p {}{}/'.format(path, no_ext))
+        run('tar -xzf /tmp/{} -C {}{}/'.format(file_n, path, no_ext))
+        run('rm /tmp/{}'.format(file_n))
+        run('mv {0}{1}/web_static/* {0}{1}/'.format(path, no_ext))
+        run('rm -rf {}{}/web_static'.format(path, no_ext))
+        run('rm -rf /data/web_static/current')
+        run('ln -s {}{}/ /data/web_static/current'.format(path, no_ext))
         return True
-
-    except Exception:
+    except:
         return False
 
 
 def deploy():
-    '''function:
-    creates and distributes an archive to your web servers
-    '''
-
-    # call the do_pack() function and store the path of the created archive
+    """creates and distributes an archive to the web servers"""
     archive_path = do_pack()
-
-    # Return False if no archive has been created
     if archive_path is None:
         return False
-
-    # call the do_deploy(archive_path) function,
-    # using the new path of the new archive
     return do_deploy(archive_path)
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-u', '--username', type=str,
-                        help='SSH username')
-    parser.add_argument('-i', '--private-key', type=str,
-                        help='Path to SSH private key')
-    args = parser.parse_args()
-
-    if args.username:
-        env.user = args.username
-
-    if args.private_key:
-        env.key_filename = args.private_key
-
-    deploy()
